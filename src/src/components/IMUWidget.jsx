@@ -1,15 +1,9 @@
-import { Maximize2, X, Activity, Upload } from 'lucide-react';
+import { Maximize2, X, Activity } from 'lucide-react';
 import { mockData } from '../data/mockData';
 
 function IMUWidget({ isExpanded, onExpand, onClose }) {
   // Use static mock data instead of generated data
   const imuData = mockData.imu;
-
-  // Handle file upload (disabled for now)
-  const handleFileUpload = async (event) => {
-    // File upload functionality disabled since IMUDataParser is not available
-    console.log('File upload not available without IMUDataParser');
-  };
 
   const formatValue = (value) => {
     return typeof value === 'number' ? value.toFixed(2) : '0.00';
@@ -20,17 +14,6 @@ function IMUWidget({ isExpanded, onExpand, onClose }) {
       <div className="widget-header">
         <h3>IMU Data</h3>
         <div className="widget-controls">
-          <input
-            type="file"
-            accept=".bin,.dat"
-            onChange={handleFileUpload}
-            style={{ display: 'none' }}
-            id="imu-file-input"
-            disabled
-          />
-          <label htmlFor="imu-file-input">
-            <Upload size={16} className="control-button" title="Upload disabled" />
-          </label>
           {isExpanded ? (
             <X size={16} onClick={onClose} className="control-button" />
           ) : (
