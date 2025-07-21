@@ -6,9 +6,61 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 function VisualizerWidget({ isExpanded, onExpand, onClose }) {
   const mountRef = useRef(null);
+  const sceneRef = useRef(null);
+  const rendererRef = useRef(null);
+  const cameraRef = useRef(null);
+  const controlsRef = useRef(null);
+  const currentModelRef = useRef(null);
+
+  // function to load/reload the model
+  const loadModel = (scene, path) => {
+    const loader = new GLTFLoader();
+    
+    const cacheBustedPath = `${path}?t=${Date.now()}`;
+    
+    loader.load(cacheBustedPath, (gltf) => {
+      if (currentModelRef.current) {
+        scene.remove(currentModelRef.current);
+      }
+  
+      const model = gltf.scene;
+      const box = new THREE.Box3().setFromObject(model);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+  
+      const targetSize = 10;
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = targetSize / maxDim;
+  
+      model.scale.setScalar(scale);
+      model.rotation.y = Math.PI / 8;
+  
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+  
+      // re-center the model geometry to origin
+      model.position.sub(center);
+  
+      scene.add(model);
+      currentModelRef.current = model;
+  
+      // reloading camera position
+      if (cameraRef.current) {
+        cameraRef.current.position.set(0, 10, 5);
+        cameraRef.current.lookAt(0, 0, 0);
+      }
+    }, undefined, (error) => {
+      console.error('Error loading model:', error);
+    });
+  };
 
   useEffect(() => {
     if (!mountRef.current) return;
+
+    // Clear any existing content
+    while (mountRef.current.firstChild) {
+      mountRef.current.removeChild(mountRef.current.firstChild);
+    }
 
     // Scene setup
     const scene = new THREE.Scene();
@@ -32,6 +84,12 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
 
+    // Store refs for polling
+    sceneRef.current = scene;
+    rendererRef.current = renderer;
+    cameraRef.current = camera;
+    controlsRef.current = controls;
+
     // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
@@ -40,46 +98,15 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
     directionalLight.position.set(10, 10, 5);
     scene.add(directionalLight);
 
-    // Model loading
-    const loader = new GLTFLoader();
-    let currentModel = null;
+    // initial model load
+    loadModel(scene, './assets/mymy_room.glb');
 
-    const loadModel = (path) => {
-      loader.load(path, (gltf) => {
-        if (currentModel) {
-          scene.remove(currentModel);
-        }
-    
-        const model = gltf.scene;
-        const box = new THREE.Box3().setFromObject(model);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-    
-        const targetSize = 10;
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = targetSize / maxDim;
-    
-        model.scale.setScalar(scale);
-        model.rotation.y = Math.PI / 8;
-    
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-    
-        // Re-center the model geometry to origin
-        model.position.sub(center);
-    
-        scene.add(model);
-        currentModel = model;
-    
-        // Place camera relative to origin (0,0,0)
-        camera.position.set(0, 10, 5);
-        camera.lookAt(0, 0, 0);
-      }, undefined, (error) => {
-        console.error('Error loading model:', error);
-      });
-    };
-
-    loadModel('./assets/mymy_room.glb');
+    // polling for file changes every 1000ms
+    const pollInterval = setInterval(() => {
+      if (sceneRef.current) {
+        loadModel(sceneRef.current, './assets/mymy_room.glb');
+      }
+    }, 1000);
 
     // Animation loop
     const animate = () => {
@@ -91,7 +118,7 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
 
     // Handle resize
     const handleResize = () => {
-      if (mountRef.current) {
+      if (mountRef.current && camera && renderer) {
         camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
@@ -101,6 +128,7 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
     window.addEventListener('resize', handleResize);
 
     return () => {
+      clearInterval(pollInterval);
       window.removeEventListener('resize', handleResize);
       if (mountRef.current && renderer.domElement) {
         mountRef.current.removeChild(renderer.domElement);
