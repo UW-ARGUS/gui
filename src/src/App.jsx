@@ -1,35 +1,124 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import { 
+  SystemWidget, 
+  IMUWidget, 
+  VisualizerWidget, 
+  CamerasWidget, 
+  TimeSeriesGraphWidget 
+} from './components';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [expandedWidget, setExpandedWidget] = useState(null);
+
+  const handleExpand = (widgetName) => {
+    setExpandedWidget(widgetName);
+  };
+
+  const handleClose = () => {
+    setExpandedWidget(null);
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div className="app">
+      <header className="app-header">
+        <h1>A.R.G.U.S Dashboard</h1>
+      </header>
 
-export default App
+      <main>
+        <div className="dashboard">
+                  <div className="dashboard-grid">
+          {/* system widget */}
+          <div className="system-widget">
+              <SystemWidget
+                isExpanded={expandedWidget === 'system'}
+                onExpand={() => handleExpand('system')}
+                onClose={handleClose}
+              />
+            </div>
+
+            {/* IMU Data Widget */}
+            <div className="imu-widget">
+              <IMUWidget
+                isExpanded={expandedWidget === 'imu'}
+                onExpand={() => handleExpand('imu')}
+                onClose={handleClose}
+              />
+            </div>
+
+            {/* 3D Visualizer Widget */}
+            <div className="visualizer-widget">
+              <VisualizerWidget
+                isExpanded={expandedWidget === 'visualizer'}
+                onExpand={() => handleExpand('visualizer')}
+                onClose={handleClose}
+              />
+            </div>
+
+          {/* cameras widget */}
+          <div className="cameras-widget">
+              <CamerasWidget
+                isExpanded={expandedWidget === 'cameras'}
+                onExpand={() => handleExpand('cameras')}
+                onClose={handleClose}
+              />
+            </div>
+
+            {/* Time Series Graph Widget */}
+            <div className="timeseries-widget">
+              <TimeSeriesGraphWidget
+                isExpanded={expandedWidget === 'timeseries'}
+                onExpand={() => handleExpand('timeseries')}
+                onClose={handleClose}
+              />
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Modal overlay for expanded widgets */}
+      {expandedWidget && (
+        <div className="modal-overlay" onClick={handleClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            {expandedWidget === 'system' && (
+              <SystemWidget
+                isExpanded={true}
+                onExpand={() => {}}
+                onClose={handleClose}
+              />
+            )}
+            {expandedWidget === 'imu' && (
+              <IMUWidget
+                isExpanded={true}
+                onExpand={() => {}}
+                onClose={handleClose}
+              />
+            )}
+            {expandedWidget === 'visualizer' && (
+              <VisualizerWidget
+                isExpanded={true}
+                onExpand={() => {}}
+                onClose={handleClose}
+              />
+            )}
+            {expandedWidget === 'cameras' && (
+              <CamerasWidget
+                isExpanded={true}
+                onExpand={() => {}}
+                onClose={handleClose}
+              />
+            )}
+            {expandedWidget === 'timeseries' && (
+              <TimeSeriesGraphWidget
+                isExpanded={true}
+                onExpand={() => {}}
+                onClose={handleClose}
+              />
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+export default App;
