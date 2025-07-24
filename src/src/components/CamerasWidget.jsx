@@ -7,10 +7,10 @@ function CamerasWidget({ isExpanded, onExpand, onClose }) {
   
   // Define the specific image files to load
   const cameraFiles = [
-    'received_0.jpg',
-    'received_2.jpg', 
-    'received_4.jpg',
-    'received_6.jpg'
+    '1.jpg',
+    '2.jpg', 
+    '3.jpg',
+    '4.jpg'
   ];
 
   const handleImageError = (index) => {
