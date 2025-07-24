@@ -15,15 +15,15 @@ function IMUWidget({ isExpanded, onExpand, onClose }) {
         <h3>IMU Data</h3>
         <div className="widget-controls">
           {isExpanded ? (
-            <X size={16} onClick={onClose} className="control-button" />
+            <X size={20} onClick={onClose} className="control-button" />
           ) : (
-            <Maximize2 size={16} onClick={onExpand} className="control-button" />
+            <Maximize2 size={20} onClick={onExpand} className="control-button" />
           )}
         </div>
       </div>
       <div className="widget-content">
         <div className="metric">
-          <Activity size={16} />
+          <Activity size={20} />
           <span className="metric-label">State</span>
           <span className={`metric-value ${imuData.state === 'moving' ? 'status-active' : ''}`}>
             {imuData.state}

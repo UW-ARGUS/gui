@@ -8,9 +8,9 @@ function SystemWidget({ isExpanded, onExpand, onClose }) {
         <h3>System</h3>
         <div className="widget-controls">
           {isExpanded ? (
-            <X size={16} onClick={onClose} className="control-button" />
+            <X size={20} onClick={onClose} className="control-button" />
           ) : (
-            <Maximize2 size={16} onClick={onExpand} className="control-button" />
+            <Maximize2 size={20} onClick={onExpand} className="control-button" />
           )}
         </div>
       </div>

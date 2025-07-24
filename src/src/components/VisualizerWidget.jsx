@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Maximize2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Maximize2, X, Play, Pause } from 'lucide-react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -11,6 +11,46 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
   const cameraRef = useRef(null);
   const controlsRef = useRef(null);
   const currentModelRef = useRef(null);
+  const pollIntervalRef = useRef(null);
+  
+  //state for start/pause polling
+  const [isPolling, setIsPolling] = useState(true);
+
+  //polling
+  const startPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+    pollIntervalRef.current = setInterval(() => {
+      if (sceneRef.current) {
+        loadModel(sceneRef.current, './assets/mymy_room.glb');
+      }
+    }, 7000);
+  };
+
+  const stopPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  };
+
+  const togglePolling = () => {
+    setIsPolling(!isPolling);
+  };
+
+  //handling polling state changes
+  useEffect(() => {
+    if (isPolling) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+    
+    return () => {
+      stopPolling();
+    };
+  }, [isPolling]);
 
   // function to load/reload the model
   const loadModel = (scene, path) => {
@@ -19,8 +59,33 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
     const cacheBustedPath = `${path}?t=${Date.now()}`;
     
     loader.load(cacheBustedPath, (gltf) => {
+      //delete current model
       if (currentModelRef.current) {
         scene.remove(currentModelRef.current);
+        
+        //removing previous material
+        currentModelRef.current.traverse((child) => {
+          if (child.geometry) {
+            child.geometry.dispose();
+          }
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(material => {
+                if (material.map) material.map.dispose();
+                if (material.normalMap) material.normalMap.dispose();
+                if (material.roughnessMap) material.roughnessMap.dispose();
+                if (material.metalnessMap) material.metalnessMap.dispose();
+                material.dispose();
+              });
+            } else {
+              if (child.material.map) child.material.map.dispose();
+              if (child.material.normalMap) child.material.normalMap.dispose();
+              if (child.material.roughnessMap) child.material.roughnessMap.dispose();
+              if (child.material.metalnessMap) child.material.metalnessMap.dispose();
+              child.material.dispose();
+            }
+          }
+        });
       }
   
       const model = gltf.scene;
@@ -71,12 +136,18 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
       1000
     );
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+    const renderer = new THREE.WebGLRenderer({ antialias: false });
+    
+    //adjusting resolution and pixel size
+    const fixedWidth = 384
+    const fixedHeight = 384;
+    
+    renderer.setSize(fixedWidth, fixedHeight);
     renderer.setClearColor(0x222222);
     renderer.domElement.style.display = 'block';
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
+    renderer.domElement.style.imageRendering = 'pixelated';
     mountRef.current.appendChild(renderer.domElement);
 
     // Controls
@@ -90,23 +161,23 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
     cameraRef.current = camera;
     controlsRef.current = controls;
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(10, 10, 5);
-    scene.add(directionalLight);
+    const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.6);
+    directionalLight1.position.set(10, 10, 5);
+    scene.add(directionalLight1);
+
+    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+    directionalLight2.position.set(-10, 5, -5);
+    scene.add(directionalLight2);
+
+    const fillLight = new THREE.DirectionalLight(0x87ceeb, 0.3);
+    fillLight.position.set(0, -10, 0);
+    scene.add(fillLight);
 
     // initial model load
     loadModel(scene, './assets/mymy_room.glb');
-
-    // polling for file changes every 1000ms
-    const pollInterval = setInterval(() => {
-      if (sceneRef.current) {
-        loadModel(sceneRef.current, './assets/mymy_room.glb');
-      }
-    }, 1000);
 
     // Animation loop
     const animate = () => {
@@ -119,16 +190,20 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
     // Handle resize
     const handleResize = () => {
       if (mountRef.current && camera && renderer) {
+        // Update camera aspect ratio to match the widget's aspect ratio
         camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight;
         camera.updateProjectionMatrix();
-        renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+        
+        // Keep the same fixed low resolution (pixels stay the same size)
+        const fixedWidth = 384;
+        const fixedHeight = 384;
+        renderer.setSize(fixedWidth, fixedHeight);
       }
     };
 
     window.addEventListener('resize', handleResize);
 
     return () => {
-      clearInterval(pollInterval);
       window.removeEventListener('resize', handleResize);
       if (mountRef.current && renderer.domElement) {
         mountRef.current.removeChild(renderer.domElement);
@@ -142,10 +217,15 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
       <div className="widget-header">
         <h3>3D Visualizer</h3>
         <div className="widget-controls">
-          {isExpanded ? (
-            <X size={16} onClick={onClose} className="control-button" />
+          {isPolling ? (
+            <Pause size={20} onClick={togglePolling} className="control-button" title="Pause polling" />
           ) : (
-            <Maximize2 size={16} onClick={onExpand} className="control-button" />
+            <Play size={20} onClick={togglePolling} className="control-button" title="Start polling" />
+          )}
+          {isExpanded ? (
+            <X size={20} onClick={onClose} className="control-button" />
+          ) : (
+            <Maximize2 size={20} onClick={onExpand} className="control-button" />
           )}
         </div>
       </div>

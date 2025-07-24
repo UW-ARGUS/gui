@@ -104,9 +104,9 @@ function TimeSeriesGraphWidget({ isExpanded, onExpand, onClose }) {
         <h3>System Metrics</h3>
         <div className="widget-controls">
           {isExpanded ? (
-            <X size={16} onClick={onClose} className="control-button" />
+            <X size={20} onClick={onClose} className="control-button" />
           ) : (
-            <Maximize2 size={16} onClick={onExpand} className="control-button" />
+            <Maximize2 size={20} onClick={onExpand} className="control-button" />
           )}
         </div>
       </div>
@@ -115,7 +115,7 @@ function TimeSeriesGraphWidget({ isExpanded, onExpand, onClose }) {
         {!isExpanded ? (
           <div className="metric-summary">
             <div className="metric large">
-              <Activity size={20} />
+              <Activity size={24} />
               <span className="metric-label">Latency</span>
               <span className="metric-value">{currentMetrics.latency.toFixed(1)}ms</span>
             </div>
@@ -162,7 +162,7 @@ function TimeSeriesGraphWidget({ isExpanded, onExpand, onClose }) {
                 const Icon = config.icon;
                 return (
                   <div key={key} className="metric">
-                    <Icon size={16} />
+                    <Icon size={20} />
                     <span className="metric-label">{config.label}</span>
                     <span className="metric-value">
                       {currentMetrics[key].toFixed(1)}{config.unit}
