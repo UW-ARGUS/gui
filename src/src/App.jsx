@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   SystemWidget, 
   IMUWidget, 
@@ -10,6 +10,32 @@ import './App.css';
 
 function App() {
   const [expandedWidget, setExpandedWidget] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState({
+    isConnected: false,
+    error: null
+  });
+
+  const checkConnection = async () => {
+    try {
+      const response = await fetch('http://localhost:8001/api/imu');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      setConnectionStatus({ isConnected: true, error: null });
+    } catch (err) {
+      console.error('Connection check failed:', err);
+      setConnectionStatus({ isConnected: false, error: err.message });
+    }
+  };
+
+  useEffect(() => {
+    checkConnection();
+    //polling interval (every 5 seconds for connection status)
+    const interval = setInterval(checkConnection, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleExpand = (widgetName) => {
     setExpandedWidget(widgetName);
@@ -34,6 +60,7 @@ function App() {
                 isExpanded={expandedWidget === 'system'}
                 onExpand={() => handleExpand('system')}
                 onClose={handleClose}
+                connectionStatus={connectionStatus}
               />
             </div>
 
@@ -85,6 +112,7 @@ function App() {
                 isExpanded={true}
                 onExpand={() => {}}
                 onClose={handleClose}
+                connectionStatus={connectionStatus}
               />
             )}
             {expandedWidget === 'imu' && (

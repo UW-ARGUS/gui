@@ -1,9 +1,38 @@
-import { Maximize2, X, Activity } from 'lucide-react';
-import { mockData } from '../data/mockData';
+import { Maximize2, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 function IMUWidget({ isExpanded, onExpand, onClose }) {
-  // Use static mock data instead of generated data
-  const imuData = mockData.imu;
+  const [imuData, setImuData] = useState({
+    state: 'idle',
+    accel: { x: 0, y: 0, z: 0 },
+    gyro: { x: 0, y: 0, z: 0 },
+    mag: { x: 0, y: 0, z: 0 },
+    timestamp: Date.now()
+  });
+
+  const fetchIMUData = async () => {
+    try {
+      const response = await fetch('http://localhost:8001/api/imu');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setImuData(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchIMUData();
+    
+    //polling interval
+    const interval = setInterval(fetchIMUData, 2000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const formatValue = (value) => {
     return typeof value === 'number' ? value.toFixed(2) : '0.00';
@@ -23,7 +52,6 @@ function IMUWidget({ isExpanded, onExpand, onClose }) {
       </div>
       <div className="widget-content">
         <div className="metric">
-          <Activity size={20} />
           <span className="metric-label">State</span>
           <span className={`metric-value ${imuData.state === 'moving' ? 'status-active' : ''}`}>
             {imuData.state}

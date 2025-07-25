@@ -1,7 +1,19 @@
-import { Maximize2, X } from 'lucide-react';
+import { Maximize2, X, Activity } from 'lucide-react';
 import { mockData } from '../data/mockData';
 
-function SystemWidget({ isExpanded, onExpand, onClose }) {
+function SystemWidget({ isExpanded, onExpand, onClose, connectionStatus }) {
+  const getConnectionStatus = () => {
+    if (connectionStatus.isConnected) {
+      return { text: 'Connected', class: 'status-active' };
+    } else if (connectionStatus.error) {
+      return { text: 'Disconnected', class: 'status-error' };
+    } else {
+      return { text: 'Connecting...', class: 'status-warning' };
+    }
+  };
+
+  const connStatus = getConnectionStatus();
+
   return (
     <div className="widget">
       <div className="widget-header">
@@ -16,12 +28,15 @@ function SystemWidget({ isExpanded, onExpand, onClose }) {
       </div>
       <div className="widget-content">
         <div className="metric">
-          <span className="metric-label">Sensors Connected</span>
-          <span className="metric-value">{mockData.system.sensorsConnected}</span>
+          <Activity size={20} />
+          <span className="metric-label">Connection</span>
+          <span className={`metric-value ${connStatus.class}`}>
+            {connStatus.text}
+          </span>
         </div>
         <div className="metric">
-          <span className="metric-label">Status</span>
-          <span className="metric-value status-active">{mockData.system.status}</span>
+          <span className="metric-label">Sensors Connected</span>
+          <span className="metric-value">{mockData.system.sensorsConnected}</span>
         </div>
       </div>
     </div>
