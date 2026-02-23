@@ -32,11 +32,11 @@ function CamerasWidget({ isExpanded, onExpand, onClose }) {
     }));
   };
 
-  // Polling for new images every 1000ms
+  // Poll every 1s so new images (same filename) show immediately via cache-busting
   useEffect(() => {
     const pollInterval = setInterval(() => {
       setRefreshTimestamp(Date.now());
-    }, 15000);
+    }, 1000);
 
     return () => {
       clearInterval(pollInterval);
@@ -67,7 +67,7 @@ function CamerasWidget({ isExpanded, onExpand, onClose }) {
                 </div>
               ) : (
                 <img
-                  src={imageUrls[index]}
+                  src={`${imageUrls[index]}?t=${refreshTimestamp}`}
                   alt={`Camera ${index + 1}`}
                   style={{
                     width: '100%',
