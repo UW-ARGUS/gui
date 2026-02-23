@@ -310,10 +310,10 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
       <div className="widget-header">
         <h3>3D Visualizer</h3>
         <div className="widget-controls">
-          {isPolling ? (
-            <Pause size={20} onClick={togglePolling} className="control-button" title="Pause polling" />
+          {isWatching ? (
+            <Pause size={20} onClick={toggleWatching} className="control-button" title="Pause" />
           ) : (
-            <Play size={20} onClick={togglePolling} className="control-button" title="Start polling" />
+            <Play size={20} onClick={toggleWatching} className="control-button" title="Play" />
           )}
           {isExpanded ? (
             <X size={20} onClick={onClose} className="control-button" />
