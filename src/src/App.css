@@ -29,6 +29,7 @@ body {
   padding: 20px;
   height: calc(100vh - 80px); /* full height without header */
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 * {
@@ -68,7 +69,7 @@ body {
   grid-template-columns: repeat(12, 1fr);
   grid-template-rows: repeat(12, 1fr);
   gap: 15px;
-  height: calc(100vh - 100px);
+  height: 100%;
 }
 
 /* Widget positioning */
@@ -76,30 +77,40 @@ body {
 .system-widget {
   grid-column: 1 / 4;
   grid-row: 1 / 4;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* imu widget - left middle */
 .imu-widget {
   grid-column: 1 / 4;
   grid-row: 4 / 9;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Main visualizer - center area */
 .visualizer-widget {
   grid-column: 4 / 9;
   grid-row: 1 / 13;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Camera feeds - right side */
 .cameras-widget {
   grid-column: 9 / 13;
   grid-row: 1 / 13;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* time series graph widget - bottom left */
 .timeseries-widget {
   grid-column: 1 / 4;
   grid-row: 9 / 13;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* widget styles */
@@ -112,6 +123,8 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .widget:hover {
@@ -166,6 +179,7 @@ body {
   padding-right: 8px;
   scrollbar-width: auto;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  min-height: 0;
 }
 
 /*scrollbar styles */

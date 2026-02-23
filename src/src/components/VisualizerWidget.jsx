@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Maximize2, X, Play, Pause } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Maximize2, X, Play, Pause, Loader } from 'lucide-react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -11,116 +11,146 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
   const cameraRef = useRef(null);
   const controlsRef = useRef(null);
   const currentModelRef = useRef(null);
-  const pollIntervalRef = useRef(null);
+  const isLoadingRef = useRef(false);
   
-  //state for start/pause polling
-  const [isPolling, setIsPolling] = useState(true);
+  const [isWatching, setIsWatching] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
 
-  //polling
-  const startPolling = () => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-    }
-    pollIntervalRef.current = setInterval(() => {
-      if (sceneRef.current) {
-        loadModel(sceneRef.current, './assets/mymy_room.glb');
+  const disposeModel = useCallback((model) => {
+    model.traverse((child) => {
+      if (child.geometry) {
+        child.geometry.dispose();
       }
-    }, 7000);
-  };
+      if (child.material) {
+        if (Array.isArray(child.material)) {
+          child.material.forEach(material => {
+            if (material.map) material.map.dispose();
+            if (material.normalMap) material.normalMap.dispose();
+            if (material.roughnessMap) material.roughnessMap.dispose();
+            if (material.metalnessMap) material.metalnessMap.dispose();
+            material.dispose();
+          });
+        } else {
+          if (child.material.map) child.material.map.dispose();
+          if (child.material.normalMap) child.material.normalMap.dispose();
+          if (child.material.roughnessMap) child.material.roughnessMap.dispose();
+          if (child.material.metalnessMap) child.material.metalnessMap.dispose();
+          child.material.dispose();
+        }
+      }
+    });
+  }, []);
 
-  const stopPolling = () => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-  };
-
-  const togglePolling = () => {
-    setIsPolling(!isPolling);
-  };
-
-  //handling polling state changes
-  useEffect(() => {
-    if (isPolling) {
-      startPolling();
-    } else {
-      stopPolling();
+  const loadModel = useCallback((scene, path) => {
+    if (isLoadingRef.current) {
+      console.log('Load already in progress, skipping...');
+      return;
     }
     
-    return () => {
-      stopPolling();
-    };
-  }, [isPolling]);
-
-  // function to load/reload the model
-  const loadModel = (scene, path) => {
+    isLoadingRef.current = true;
+    setIsLoading(true);
+    setLoadProgress(0);
+    
     const loader = new GLTFLoader();
-    
     const cacheBustedPath = `${path}?t=${Date.now()}`;
     
-    loader.load(cacheBustedPath, (gltf) => {
-      //delete current model
-      if (currentModelRef.current) {
-        scene.remove(currentModelRef.current);
+    loader.load(
+      cacheBustedPath,
+      (gltf) => {
+        const newModel = gltf.scene;
+        const box = new THREE.Box3().setFromObject(newModel);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+
+        const targetSize = 6;
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = targetSize / maxDim;
+
+        newModel.scale.setScalar(scale);
+        newModel.rotation.y = Math.PI / 8;
+
+        const scaledBox = new THREE.Box3().setFromObject(newModel);
+        const center = new THREE.Vector3();
+        scaledBox.getCenter(center);
+        newModel.position.sub(center);
+
+        scene.add(newModel);
         
-        //removing previous material
-        currentModelRef.current.traverse((child) => {
-          if (child.geometry) {
-            child.geometry.dispose();
-          }
-          if (child.material) {
-            if (Array.isArray(child.material)) {
-              child.material.forEach(material => {
-                if (material.map) material.map.dispose();
-                if (material.normalMap) material.normalMap.dispose();
-                if (material.roughnessMap) material.roughnessMap.dispose();
-                if (material.metalnessMap) material.metalnessMap.dispose();
-                material.dispose();
-              });
-            } else {
-              if (child.material.map) child.material.map.dispose();
-              if (child.material.normalMap) child.material.normalMap.dispose();
-              if (child.material.roughnessMap) child.material.roughnessMap.dispose();
-              if (child.material.metalnessMap) child.material.metalnessMap.dispose();
-              child.material.dispose();
-            }
-          }
-        });
+        if (currentModelRef.current) {
+          scene.remove(currentModelRef.current);
+          disposeModel(currentModelRef.current);
+        }
+        
+        currentModelRef.current = newModel;
+
+        if (cameraRef.current && controlsRef.current) {
+          const scaledSize = new THREE.Vector3();
+          scaledBox.getSize(scaledSize);
+          const maxScaledDim = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
+          const cameraDistance = maxScaledDim * 1.5;
+          
+          cameraRef.current.position.set(0, cameraDistance * 0.7, cameraDistance);
+          cameraRef.current.lookAt(0, 0, 0);
+          controlsRef.current.target.set(0, 0, 0);
+          controlsRef.current.update();
+        }
+        
+        isLoadingRef.current = false;
+        setIsLoading(false);
+        setLoadProgress(100);
+      },
+      (progress) => {
+        if (progress.lengthComputable) {
+          const percent = Math.round((progress.loaded / progress.total) * 100);
+          setLoadProgress(percent);
+        }
+      },
+      (error) => {
+        console.error('Error loading model:', error);
+        isLoadingRef.current = false;
+        setIsLoading(false);
       }
+    );
+  }, [disposeModel]);
+
+  const wasWatchingRef = useRef(isWatching);
   
-      const model = gltf.scene;
-      const box = new THREE.Box3().setFromObject(model);
-      const size = new THREE.Vector3();
-      box.getSize(size);
-  
-      const targetSize = 10;
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = targetSize / maxDim;
-  
-      model.scale.setScalar(scale);
-      model.rotation.y = Math.PI / 8;
-  
-      const center = new THREE.Vector3();
-      box.getCenter(center);
-  
-      // re-center the model geometry to origin
-      model.position.sub(center);
-  
-      scene.add(model);
-      currentModelRef.current = model;
-  
-      // reloading camera position
-      if (cameraRef.current) {
-        cameraRef.current.position.set(0, 10, 5);
-        cameraRef.current.lookAt(0, 0, 0);
-      }
-    }, undefined, (error) => {
-      console.error('Error loading model:', error);
-    });
+  useEffect(() => {
+    // Reload when switching from paused to watching (but not on initial mount)
+    if (isWatching && !wasWatchingRef.current && sceneRef.current) {
+      loadModel(sceneRef.current, './assets/mymy_room.glb');
+    }
+    wasWatchingRef.current = isWatching;
+    
+    if (!isWatching) return;
+    if (!sceneRef.current) return;
+
+    if (import.meta.hot) {
+      const handleGlbUpdate = (data) => {
+        console.log('GLB file changed:', data.file);
+        if (sceneRef.current) {
+          loadModel(sceneRef.current, './assets/mymy_room.glb');
+        }
+      };
+
+      import.meta.hot.on('glb-update', handleGlbUpdate);
+
+      return () => {
+        import.meta.hot.off('glb-update', handleGlbUpdate);
+      };
+    }
+  }, [isWatching, loadModel]);
+
+  const toggleWatching = () => {
+    setIsWatching(!isWatching);
   };
 
   useEffect(() => {
     if (!mountRef.current) return;
+
+    // Reset loading state on mount (important for React 18 Strict Mode)
+    isLoadingRef.current = false;
 
     // Clear any existing content
     while (mountRef.current.firstChild) {
@@ -155,7 +185,7 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
 
-    // Store refs for polling
+    // Store refs
     sceneRef.current = scene;
     rendererRef.current = renderer;
     cameraRef.current = camera;
@@ -176,12 +206,67 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
     fillLight.position.set(0, -10, 0);
     scene.add(fillLight);
 
-    // initial model load
-    loadModel(scene, './assets/mymy_room.glb');
+    const loader = new GLTFLoader();
+    const cacheBustedPath = `./assets/mymy_room.glb?t=${Date.now()}`;
+    
+    isLoadingRef.current = true;
+    setIsLoading(true);
+    setLoadProgress(0);
+    
+    loader.load(
+      cacheBustedPath,
+      (gltf) => {
+        const newModel = gltf.scene;
+        const box = new THREE.Box3().setFromObject(newModel);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+
+        const targetSize = 6;
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = targetSize / maxDim;
+
+        newModel.scale.setScalar(scale);
+        newModel.rotation.y = Math.PI / 8;
+
+        const scaledBox = new THREE.Box3().setFromObject(newModel);
+        const center = new THREE.Vector3();
+        scaledBox.getCenter(center);
+        newModel.position.sub(center);
+
+        scene.add(newModel);
+        currentModelRef.current = newModel;
+
+        const scaledSize = new THREE.Vector3();
+        scaledBox.getSize(scaledSize);
+        const maxScaledDim = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
+        const cameraDistance = maxScaledDim * 1.5;
+        
+        camera.position.set(0, cameraDistance * 0.7, cameraDistance);
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+        
+        isLoadingRef.current = false;
+        setIsLoading(false);
+        setLoadProgress(100);
+      },
+      (progress) => {
+        if (progress.lengthComputable) {
+          const percent = Math.round((progress.loaded / progress.total) * 100);
+          setLoadProgress(percent);
+        }
+      },
+      (error) => {
+        console.error('Error loading model:', error);
+        isLoadingRef.current = false;
+        setIsLoading(false);
+      }
+    );
 
     // Animation loop
+    let animationId;
     const animate = () => {
-      requestAnimationFrame(animate);
+      animationId = requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
     };
@@ -190,11 +275,9 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
     // Handle resize
     const handleResize = () => {
       if (mountRef.current && camera && renderer) {
-        // Update camera aspect ratio to match the widget's aspect ratio
         camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight;
         camera.updateProjectionMatrix();
         
-        // Keep the same fixed low resolution (pixels stay the same size)
         const fixedWidth = 384;
         const fixedHeight = 384;
         renderer.setSize(fixedWidth, fixedHeight);
@@ -205,6 +288,16 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationId);
+      
+      // Reset refs on cleanup
+      sceneRef.current = null;
+      rendererRef.current = null;
+      cameraRef.current = null;
+      controlsRef.current = null;
+      currentModelRef.current = null;
+      isLoadingRef.current = false;
+      
       if (mountRef.current && renderer.domElement) {
         mountRef.current.removeChild(renderer.domElement);
       }
@@ -229,7 +322,7 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
           )}
         </div>
       </div>
-      <div className="widget-content" style={{ padding: '0', overflow: 'hidden' }}>
+      <div className="widget-content" style={{ padding: '0', overflow: 'hidden', position: 'relative' }}>
         <div 
           ref={mountRef} 
           style={{ 
@@ -241,6 +334,37 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
             boxSizing: 'border-box'
           }} 
         />
+        {isLoading && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(34, 34, 34, 0.7)',
+            borderRadius: '8px',
+            pointerEvents: 'none'
+          }}>
+            <Loader 
+              size={32} 
+              style={{ 
+                animation: 'spin 1s linear infinite',
+                color: '#fff'
+              }} 
+            />
+            <span style={{ 
+              color: '#fff', 
+              marginTop: '8px',
+              fontSize: '14px'
+            }}>
+              {loadProgress > 0 ? `Loading ${loadProgress}%` : 'Loading...'}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
