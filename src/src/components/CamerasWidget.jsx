@@ -1,17 +1,22 @@
 import { Maximize2, X, Camera } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+
+const imageModules = import.meta.glob('../../assets/received_*.jpg', { query: '?url', import: 'default', eager: true });
 
 function CamerasWidget({ isExpanded, onExpand, onClose }) {
   const [imageErrors, setImageErrors] = useState({});
   const [refreshTimestamp, setRefreshTimestamp] = useState(Date.now());
-  
-  // Define the specific image files to load
-  const cameraFiles = [
+
+  const cameraFiles = useMemo(() => [
     'received_0.jpg',
-    'received_2.jpg', 
+    'received_2.jpg',
     'received_4.jpg',
     'received_6.jpg'
-  ];
+  ], []);
+
+  const imageUrls = useMemo(() => cameraFiles.map(
+    (filename) => imageModules[`../../assets/${filename}`] ?? null
+  ), [cameraFiles]);
 
   const handleImageError = (index) => {
     setImageErrors(prev => ({
@@ -54,15 +59,15 @@ function CamerasWidget({ isExpanded, onExpand, onClose }) {
         <div className="camera-grid">
           {cameraFiles.map((filename, index) => (
             <div key={index} className="camera-feed">
-              {imageErrors[index] ? (
+              {!imageUrls[index] || imageErrors[index] ? (
                 <div className="camera-placeholder">
                   <Camera size={32} />
                   <span>Camera {index + 1}</span>
                   <small>{filename}</small>
                 </div>
               ) : (
-                <img 
-                  src={`./assets/${filename}?t=${refreshTimestamp}`}
+                <img
+                  src={imageUrls[index]}
                   alt={`Camera ${index + 1}`}
                   style={{
                     width: '100%',
