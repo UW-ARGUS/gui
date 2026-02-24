@@ -115,6 +115,7 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
   }, [disposeModel]);
 
   const wasWatchingRef = useRef(isWatching);
+  const lastModifiedRef = useRef(null);
   const glbPath = './assets/mymy_room.glb';
 
   useEffect(() => {
@@ -126,12 +127,28 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
     
     if (!isWatching) return;
 
-    // Poll every 0.5s so when the GLB file is replaced (same name), the visualizer updates
-    const pollInterval = setInterval(() => {
-      if (sceneRef.current) {
+    // Poll every 200ms to match ~0.2s build updates; only full reload when file changed (HEAD check)
+    const pollInterval = setInterval(async () => {
+      if (!sceneRef.current) return;
+      try {
+        const res = await fetch(glbPath, { method: 'HEAD', cache: 'no-store' });
+        const lastMod = res.headers.get('last-modified') || res.headers.get('etag') || res.headers.get('content-length');
+        if (lastMod) {
+          if (lastModifiedRef.current === null) {
+            lastModifiedRef.current = lastMod; // init so we don't reload until file changes
+          } else if (lastMod !== lastModifiedRef.current) {
+            lastModifiedRef.current = lastMod;
+            loadModel(sceneRef.current, glbPath);
+          }
+        } else {
+          // Server didn't send change info: reload every 200ms
+          loadModel(sceneRef.current, glbPath);
+        }
+      } catch {
+        // HEAD not supported: fall back to unconditional reload every 200ms
         loadModel(sceneRef.current, glbPath);
       }
-    }, 500);
+    }, 200);
 
     if (import.meta.hot) {
       const handleGlbUpdate = (data) => {
