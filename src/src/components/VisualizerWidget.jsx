@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Maximize2, X, Play, Pause, Loader } from 'lucide-react';
+import { Maximize2, X, Play, Pause } from 'lucide-react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -344,37 +344,6 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
             boxSizing: 'border-box'
           }} 
         />
-        {isLoading && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(34, 34, 34, 0.7)',
-            borderRadius: '8px',
-            pointerEvents: 'none'
-          }}>
-            <Loader 
-              size={32} 
-              style={{ 
-                animation: 'spin 1s linear infinite',
-                color: '#fff'
-              }} 
-            />
-            <span style={{ 
-              color: '#fff', 
-              marginTop: '8px',
-              fontSize: '14px'
-            }}>
-              {loadProgress > 0 ? `Loading ${loadProgress}%` : 'Loading...'}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );

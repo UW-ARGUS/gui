@@ -32,11 +32,11 @@ function CamerasWidget({ isExpanded, onExpand, onClose }) {
     }));
   };
 
-  // Poll every 0.5s so new images (same filename) show immediately via cache-busting
+  // Poll every 0.025s so new images (same filename) show immediately via cache-busting
   useEffect(() => {
     const pollInterval = setInterval(() => {
       setRefreshTimestamp(Date.now());
-    }, 500);
+    }, 25);
 
     return () => {
       clearInterval(pollInterval);
