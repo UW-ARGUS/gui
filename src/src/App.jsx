@@ -8,12 +8,20 @@ import {
 } from './components';
 import './App.css';
 
+const ASSET_POLL_MS = 1000;
+
 function App() {
   const [expandedWidget, setExpandedWidget] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState({
     isConnected: false,
     error: null
   });
+  const [assetRefreshTick, setAssetRefreshTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setAssetRefreshTick(Date.now()), ASSET_POLL_MS);
+    return () => clearInterval(interval);
+  }, []);
 
   const checkConnection = async () => {
     try {
@@ -79,6 +87,7 @@ function App() {
                 isExpanded={expandedWidget === 'visualizer'}
                 onExpand={() => handleExpand('visualizer')}
                 onClose={handleClose}
+                assetRefreshTick={assetRefreshTick}
               />
             </div>
 
@@ -88,6 +97,7 @@ function App() {
                 isExpanded={expandedWidget === 'cameras'}
                 onExpand={() => handleExpand('cameras')}
                 onClose={handleClose}
+                assetRefreshTick={assetRefreshTick}
               />
             </div>
 
@@ -127,6 +137,7 @@ function App() {
                 isExpanded={true}
                 onExpand={() => {}}
                 onClose={handleClose}
+                assetRefreshTick={assetRefreshTick}
               />
             )}
             {expandedWidget === 'cameras' && (
@@ -134,6 +145,7 @@ function App() {
                 isExpanded={true}
                 onExpand={() => {}}
                 onClose={handleClose}
+                assetRefreshTick={assetRefreshTick}
               />
             )}
             {expandedWidget === 'timeseries' && (

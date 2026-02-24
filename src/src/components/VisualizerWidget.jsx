@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-function VisualizerWidget({ isExpanded, onExpand, onClose }) {
+function VisualizerWidget({ isExpanded, onExpand, onClose, assetRefreshTick }) {
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
@@ -12,6 +12,7 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
   const controlsRef = useRef(null);
   const currentModelRef = useRef(null);
   const isLoadingRef = useRef(false);
+  const abortControllerRef = useRef(null);
   
   const [isWatching, setIsWatching] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,132 +43,123 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
     });
   }, []);
 
-  const loadModel = useCallback((scene, path) => {
-    if (isLoadingRef.current) {
-      console.log('Load already in progress, skipping...');
-      return;
-    }
-    
+  const loadModel = useCallback((scene, path, signal) => {
     isLoadingRef.current = true;
     setIsLoading(true);
     setLoadProgress(0);
-    
-    const loader = new GLTFLoader();
-    const cacheBustedPath = `${path}?t=${Date.now()}`;
-    
-    loader.load(
-      cacheBustedPath,
-      (gltf) => {
-        const newModel = gltf.scene;
-        const box = new THREE.Box3().setFromObject(newModel);
-        const size = new THREE.Vector3();
-        box.getSize(size);
 
-        const targetSize = 6;
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = targetSize / maxDim;
+    const url = path.includes('?') ? `${path}&_=${Date.now()}` : `${path}?t=${Date.now()}`;
 
-        newModel.scale.setScalar(scale);
-        newModel.rotation.y = Math.PI / 8;
-
-        const scaledBox = new THREE.Box3().setFromObject(newModel);
-        const center = new THREE.Vector3();
-        scaledBox.getCenter(center);
-        newModel.position.sub(center);
-
-        scene.add(newModel);
-        
-        if (currentModelRef.current) {
-          scene.remove(currentModelRef.current);
-          disposeModel(currentModelRef.current);
-        }
-        
-        currentModelRef.current = newModel;
-
-        if (cameraRef.current && controlsRef.current) {
-          const scaledSize = new THREE.Vector3();
-          scaledBox.getSize(scaledSize);
-          const maxScaledDim = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
-          const cameraDistance = maxScaledDim * 1.5;
-          
-          cameraRef.current.position.set(0, cameraDistance * 0.7, cameraDistance);
-          cameraRef.current.lookAt(0, 0, 0);
-          controlsRef.current.target.set(0, 0, 0);
-          controlsRef.current.update();
-        }
-        
-        isLoadingRef.current = false;
-        setIsLoading(false);
-        setLoadProgress(100);
-      },
-      (progress) => {
-        if (progress.lengthComputable) {
-          const percent = Math.round((progress.loaded / progress.total) * 100);
-          setLoadProgress(percent);
-        }
-      },
-      (error) => {
-        console.error('Error loading model:', error);
-        isLoadingRef.current = false;
-        setIsLoading(false);
+    const applyModel = (gltf) => {
+      if (signal?.aborted) {
+        clearLoading();
+        return;
       }
-    );
+      const newModel = gltf.scene;
+      const box = new THREE.Box3().setFromObject(newModel);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const targetSize = 6;
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = targetSize / maxDim;
+      newModel.scale.setScalar(scale);
+      newModel.rotation.y = Math.PI / 8;
+      const scaledBox = new THREE.Box3().setFromObject(newModel);
+      const center = new THREE.Vector3();
+      scaledBox.getCenter(center);
+      newModel.position.sub(center);
+      scene.add(newModel);
+      if (currentModelRef.current) {
+        scene.remove(currentModelRef.current);
+        disposeModel(currentModelRef.current);
+      }
+      currentModelRef.current = newModel;
+      if (cameraRef.current && controlsRef.current) {
+        const scaledSize = new THREE.Vector3();
+        scaledBox.getSize(scaledSize);
+        const maxScaledDim = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
+        const cameraDistance = maxScaledDim * 1.5;
+        cameraRef.current.position.set(0, cameraDistance * 0.7, cameraDistance);
+        cameraRef.current.lookAt(0, 0, 0);
+        controlsRef.current.target.set(0, 0, 0);
+        controlsRef.current.update();
+      }
+      isLoadingRef.current = false;
+      setIsLoading(false);
+      setLoadProgress(100);
+    };
+
+    const clearLoading = () => {
+      isLoadingRef.current = false;
+      setIsLoading(false);
+    };
+
+    fetch(url, { cache: 'no-store', signal })
+      .then((res) => {
+        if (signal?.aborted) return null;
+        if (!res.ok) throw new Error(res.statusText);
+        return res.arrayBuffer();
+      })
+      .then((arrayBuffer) => {
+        if (signal?.aborted || !arrayBuffer) return;
+        const loader = new GLTFLoader();
+        loader.parse(arrayBuffer, '', (gltf) => applyModel(gltf), (err) => {
+          if (!signal?.aborted) console.error('Error parsing model:', err);
+          clearLoading();
+        });
+      })
+      .catch((err) => {
+        if (err.name === 'AbortError') {
+          clearLoading();
+          return;
+        }
+        console.error('Error loading model:', err);
+        clearLoading();
+      });
   }, [disposeModel]);
 
   const wasWatchingRef = useRef(isWatching);
-  const lastModifiedRef = useRef(null);
+  const prevTickRef = useRef(null);
   const glbPath = './assets/mymy_room.glb';
 
   useEffect(() => {
     // Reload when switching from paused to watching (but not on initial mount)
     if (isWatching && !wasWatchingRef.current && sceneRef.current) {
-      loadModel(sceneRef.current, glbPath);
+      abortControllerRef.current?.abort();
+      const ctrl = new AbortController();
+      abortControllerRef.current = ctrl;
+      loadModel(sceneRef.current, glbPath, ctrl.signal);
     }
     wasWatchingRef.current = isWatching;
     
-    if (!isWatching) return;
-
-    // Poll every 200ms to match ~0.2s build updates; only full reload when file changed (HEAD check)
-    const pollInterval = setInterval(async () => {
-      if (!sceneRef.current) return;
-      try {
-        const res = await fetch(glbPath, { method: 'HEAD', cache: 'no-store' });
-        const lastMod = res.headers.get('last-modified') || res.headers.get('etag') || res.headers.get('content-length');
-        if (lastMod) {
-          if (lastModifiedRef.current === null) {
-            lastModifiedRef.current = lastMod; // init so we don't reload until file changes
-          } else if (lastMod !== lastModifiedRef.current) {
-            lastModifiedRef.current = lastMod;
-            loadModel(sceneRef.current, glbPath);
-          }
-        } else {
-          // Server didn't send change info: reload every 200ms
-          loadModel(sceneRef.current, glbPath);
-        }
-      } catch {
-        // HEAD not supported: fall back to unconditional reload every 200ms
-        loadModel(sceneRef.current, glbPath);
-      }
-    }, 200);
-
-    if (import.meta.hot) {
-      const handleGlbUpdate = (data) => {
-        console.log('GLB file changed:', data.file);
-        if (sceneRef.current) {
-          loadModel(sceneRef.current, glbPath);
-        }
-      };
-
-      import.meta.hot.on('glb-update', handleGlbUpdate);
-
-      return () => {
-        import.meta.hot.off('glb-update', handleGlbUpdate);
-        clearInterval(pollInterval);
-      };
+    if (!isWatching || !assetRefreshTick || !sceneRef.current) return;
+    // Skip first tick (scene setup already loads once); reload on every subsequent tick
+    if (prevTickRef.current === null) {
+      prevTickRef.current = assetRefreshTick;
+      return;
     }
+    if (prevTickRef.current === assetRefreshTick) return;
+    prevTickRef.current = assetRefreshTick;
 
-    return () => clearInterval(pollInterval);
-  }, [isWatching, loadModel]);
+    // Cancel any in-flight load so we don't get 2–4s pauses; always start the latest tick's load
+    abortControllerRef.current?.abort();
+    const ctrl = new AbortController();
+    abortControllerRef.current = ctrl;
+    const cacheBustedPath = `${glbPath}?t=${assetRefreshTick}`;
+    loadModel(sceneRef.current, cacheBustedPath, ctrl.signal);
+
+    return () => abortControllerRef.current?.abort();
+  }, [isWatching, loadModel, assetRefreshTick]);
+
+  useEffect(() => {
+    if (!import.meta.hot) return;
+    const handleGlbUpdate = (data) => {
+      console.log('GLB file changed:', data.file);
+      if (sceneRef.current) loadModel(sceneRef.current, glbPath);
+    };
+    import.meta.hot.on('glb-update', handleGlbUpdate);
+    return () => import.meta.hot.off('glb-update', handleGlbUpdate);
+  }, [loadModel]);
 
   const toggleWatching = () => {
     setIsWatching(!isWatching);
@@ -233,62 +225,7 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
     fillLight.position.set(0, -10, 0);
     scene.add(fillLight);
 
-    const loader = new GLTFLoader();
-    const cacheBustedPath = `./assets/mymy_room.glb?t=${Date.now()}`;
-    
-    isLoadingRef.current = true;
-    setIsLoading(true);
-    setLoadProgress(0);
-    
-    loader.load(
-      cacheBustedPath,
-      (gltf) => {
-        const newModel = gltf.scene;
-        const box = new THREE.Box3().setFromObject(newModel);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-
-        const targetSize = 6;
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = targetSize / maxDim;
-
-        newModel.scale.setScalar(scale);
-        newModel.rotation.y = Math.PI / 8;
-
-        const scaledBox = new THREE.Box3().setFromObject(newModel);
-        const center = new THREE.Vector3();
-        scaledBox.getCenter(center);
-        newModel.position.sub(center);
-
-        scene.add(newModel);
-        currentModelRef.current = newModel;
-
-        const scaledSize = new THREE.Vector3();
-        scaledBox.getSize(scaledSize);
-        const maxScaledDim = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
-        const cameraDistance = maxScaledDim * 1.5;
-        
-        camera.position.set(0, cameraDistance * 0.7, cameraDistance);
-        camera.lookAt(0, 0, 0);
-        controls.target.set(0, 0, 0);
-        controls.update();
-        
-        isLoadingRef.current = false;
-        setIsLoading(false);
-        setLoadProgress(100);
-      },
-      (progress) => {
-        if (progress.lengthComputable) {
-          const percent = Math.round((progress.loaded / progress.total) * 100);
-          setLoadProgress(percent);
-        }
-      },
-      (error) => {
-        console.error('Error loading model:', error);
-        isLoadingRef.current = false;
-        setIsLoading(false);
-      }
-    );
+    loadModel(scene, './assets/mymy_room.glb');
 
     // Animation loop
     let animationId;

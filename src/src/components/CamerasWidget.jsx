@@ -3,9 +3,8 @@ import { useState, useEffect, useMemo } from 'react';
 
 const imageModules = import.meta.glob('../../assets/received_*.jpg', { query: '?url', import: 'default', eager: true });
 
-function CamerasWidget({ isExpanded, onExpand, onClose }) {
+function CamerasWidget({ isExpanded, onExpand, onClose, assetRefreshTick = Date.now() }) {
   const [imageErrors, setImageErrors] = useState({});
-  const [refreshTimestamp, setRefreshTimestamp] = useState(Date.now());
 
   const cameraFiles = useMemo(() => [
     'received_0.jpg',
@@ -32,17 +31,6 @@ function CamerasWidget({ isExpanded, onExpand, onClose }) {
     }));
   };
 
-  // Poll every 0.025s so new images (same filename) show immediately via cache-busting
-  useEffect(() => {
-    const pollInterval = setInterval(() => {
-      setRefreshTimestamp(Date.now());
-    }, 25);
-
-    return () => {
-      clearInterval(pollInterval);
-    };
-  }, []);
-
   return (
     <div className="widget">
       <div className="widget-header">
@@ -67,7 +55,8 @@ function CamerasWidget({ isExpanded, onExpand, onClose }) {
                 </div>
               ) : (
                 <img
-                  src={`${imageUrls[index]}?t=${refreshTimestamp}`}
+                  key={`${index}-${assetRefreshTick}`}
+                  src={`${imageUrls[index]}?t=${assetRefreshTick}`}
                   alt={`Camera ${index + 1}`}
                   style={{
                     width: '100%',
