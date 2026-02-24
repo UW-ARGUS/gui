@@ -115,22 +115,29 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
   }, [disposeModel]);
 
   const wasWatchingRef = useRef(isWatching);
-  
+  const glbPath = './assets/mymy_room.glb';
+
   useEffect(() => {
     // Reload when switching from paused to watching (but not on initial mount)
     if (isWatching && !wasWatchingRef.current && sceneRef.current) {
-      loadModel(sceneRef.current, './assets/mymy_room.glb');
+      loadModel(sceneRef.current, glbPath);
     }
     wasWatchingRef.current = isWatching;
     
     if (!isWatching) return;
-    if (!sceneRef.current) return;
+
+    // Poll every 0.5s so when the GLB file is replaced (same name), the visualizer updates
+    const pollInterval = setInterval(() => {
+      if (sceneRef.current) {
+        loadModel(sceneRef.current, glbPath);
+      }
+    }, 500);
 
     if (import.meta.hot) {
       const handleGlbUpdate = (data) => {
         console.log('GLB file changed:', data.file);
         if (sceneRef.current) {
-          loadModel(sceneRef.current, './assets/mymy_room.glb');
+          loadModel(sceneRef.current, glbPath);
         }
       };
 
@@ -138,8 +145,11 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
 
       return () => {
         import.meta.hot.off('glb-update', handleGlbUpdate);
+        clearInterval(pollInterval);
       };
     }
+
+    return () => clearInterval(pollInterval);
   }, [isWatching, loadModel]);
 
   const toggleWatching = () => {
