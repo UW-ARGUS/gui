@@ -47,6 +47,16 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
       console.log('Load already in progress, skipping...');
       return;
     }
+
+    // Immediately remove the old model so no remnants persist while the new one loads
+    if (currentModelRef.current) {
+      scene.remove(currentModelRef.current);
+      disposeModel(currentModelRef.current);
+      currentModelRef.current = null;
+    }
+
+    // Wipe Three.js internal file cache so old geometry/texture data isn't reused
+    THREE.Cache.clear();
     
     isLoadingRef.current = true;
     setIsLoading(true);
@@ -76,25 +86,7 @@ function VisualizerWidget({ isExpanded, onExpand, onClose }) {
         newModel.position.sub(center);
 
         scene.add(newModel);
-        
-        if (currentModelRef.current) {
-          scene.remove(currentModelRef.current);
-          disposeModel(currentModelRef.current);
-        }
-        
         currentModelRef.current = newModel;
-
-        if (cameraRef.current && controlsRef.current) {
-          const scaledSize = new THREE.Vector3();
-          scaledBox.getSize(scaledSize);
-          const maxScaledDim = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
-          const cameraDistance = maxScaledDim * 1.5;
-          
-          cameraRef.current.position.set(0, cameraDistance * 0.7, cameraDistance);
-          cameraRef.current.lookAt(0, 0, 0);
-          controlsRef.current.target.set(0, 0, 0);
-          controlsRef.current.update();
-        }
         
         isLoadingRef.current = false;
         setIsLoading(false);
