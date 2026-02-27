@@ -28,34 +28,36 @@ const METRICS_CONFIG = {
 };
 
 // Reusable Chart Component
-function MetricChart({ data, metricKey, height = 150 }) {
+function MetricChart({ data, metricKey }) {
   const config = METRICS_CONFIG[metricKey];
   
   return (
     <div className="chart-section">
       <h4>{config.label} ({config.unit})</h4>
-      <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={data}>
-          <CartesianGrid {...CHART_CONFIG.cartesianGrid} />
-          <XAxis 
-            {...CHART_CONFIG.xAxis}
-            dataKey="timestamp"
-            tickFormatter={(value) => new Date(value).toLocaleTimeString()}
-          />
-          <YAxis {...CHART_CONFIG.yAxis} domain={config.domain} />
-          <Tooltip 
-            {...CHART_CONFIG.tooltip}
-            labelFormatter={(value) => `Time: ${new Date(value).toLocaleTimeString()}`}
-            formatter={(value) => [`${value.toFixed(1)}${config.unit}`, config.label]}
-          />
-          <Line 
-            {...CHART_CONFIG.line}
-            type="monotone" 
-            dataKey={metricKey}
-            stroke={config.color}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      <div className="chart-body">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data}>
+            <CartesianGrid {...CHART_CONFIG.cartesianGrid} />
+            <XAxis 
+              {...CHART_CONFIG.xAxis}
+              dataKey="timestamp"
+              tickFormatter={(value) => new Date(value).toLocaleTimeString()}
+            />
+            <YAxis {...CHART_CONFIG.yAxis} domain={config.domain} />
+            <Tooltip 
+              {...CHART_CONFIG.tooltip}
+              labelFormatter={(value) => `Time: ${new Date(value).toLocaleTimeString()}`}
+              formatter={(value) => [`${value.toFixed(1)}${config.unit}`, config.label]}
+            />
+            <Line 
+              {...CHART_CONFIG.line}
+              type="monotone" 
+              dataKey={metricKey}
+              stroke={config.color}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -65,33 +67,43 @@ function TimeSeriesGraphWidget({ isExpanded, onExpand, onClose }) {
   const [currentMetrics, setCurrentMetrics] = useState({ latency: 23 });
 
   useEffect(() => {
-    const generateDataPoint = (timestamp) => {
-      const newMetrics = {
-        latency: Math.max(5, Math.min(100, currentMetrics.latency + (Math.random() - 0.5) * 10))
-      };
-      
-      setCurrentMetrics(newMetrics);
-      return { time: new Date(timestamp).toLocaleTimeString(), timestamp, ...newMetrics };
+    let isMounted = true;
+
+    const fetchLatency = async () => {
+      try {
+        const response = await fetch('/api/latency');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const { latencyMs } = await response.json();
+        if (!isMounted || latencyMs == null) return;
+
+        const latency = Math.max(0, Number(latencyMs));
+        const timestamp = Date.now();
+        const newMetrics = { latency };
+        const newDataPoint = {
+          time: new Date(timestamp).toLocaleTimeString(),
+          timestamp,
+          ...newMetrics
+        };
+
+        setCurrentMetrics(newMetrics);
+        setData(prev => [...prev, newDataPoint].slice(-50));
+      } catch (err) {
+        console.error('Failed to fetch latency:', err);
+      }
     };
 
-    // Generate initial data
-    const startTime = Date.now();
-    const initialData = Array.from({ length: 20 }, (_, i) => 
-      generateDataPoint(startTime - (19 - i) * 1000)
-    );
-    setData(initialData);
+    // Initial fill
+    fetchLatency();
 
-    // Start real-time updates
-    const startTimeout = setTimeout(() => {
-      const interval = setInterval(() => {
-        const newDataPoint = generateDataPoint(Date.now());
-        setData(prev => [...prev, newDataPoint].slice(-50));
-      }, 1000);
+    // Poll every second
+    const interval = setInterval(fetchLatency, 1000);
 
-      return () => clearInterval(interval);
-    }, 1000);
-
-    return () => clearTimeout(startTimeout);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   return (

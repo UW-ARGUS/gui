@@ -12,7 +12,7 @@ function IMUWidget({ isExpanded, onExpand, onClose }) {
 
   const fetchIMUData = async () => {
     try {
-      const response = await fetch('http://localhost:8001/api/imu');
+      const response = await fetch('/api/imu');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

@@ -53,10 +53,6 @@ function SystemWidget({ isExpanded, onExpand, onClose, connectionStatus }) {
             {connStatus.text}
           </span>
         </div>
-        <div className="metric">
-          <span className="metric-label">Sensors Connected</span>
-          <span className="metric-value">{mockData.system.sensorsConnected}</span>
-        </div>
         <div className="system-actions">
           <button
             className={`action-button restart-button ${executing === 'start_embedded.sh' ? 'executing' : ''}`}
@@ -65,6 +61,22 @@ function SystemWidget({ isExpanded, onExpand, onClose, connectionStatus }) {
           >
             <RefreshCw size={16} />
             {executing === 'start_embedded.sh' ? 'Restarting...' : 'Restart Embedded'}
+          </button>
+          <button
+            className={`action-button test-button ${executing === 'start_base_station.sh' ? 'executing' : ''}`}
+            onClick={() => runScript('start_base_station.sh', 'start_mapping')}
+            disabled={!!executing}
+          >
+            <RefreshCw size={16} />
+            {executing === 'start_base_station.sh' ? 'Starting Mapping...' : 'Start Mapping'}
+          </button>
+          <button
+            className={`action-button test-button ${executing === 'stop_mapping.sh' ? 'executing' : ''}`}
+            onClick={() => runScript('stop_mapping.sh', 'stop_mapping')}
+            disabled={!!executing}
+          >
+            <Power size={16} />
+            {executing === 'stop_mapping.sh' ? 'Stopping Mapping...' : 'Stop Mapping'}
           </button>
           <button
             className={`action-button power-button ${executing === 'power_off.sh' ? 'executing' : ''}`}

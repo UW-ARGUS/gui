@@ -62,7 +62,7 @@ function CamerasWidget({ isExpanded, onExpand, onClose }) {
                 </div>
               ) : (
                 <img 
-                  src={`./assets/${filename}?t=${refreshTimestamp}`}
+                  src={`/images/${filename}?t=${refreshTimestamp}`}
                   alt={`Camera ${index + 1}`}
                   style={{
                     width: '100%',

@@ -17,7 +17,7 @@ function App() {
 
   const checkConnection = async () => {
     try {
-      const response = await fetch('http://localhost:8001/api/imu');
+      const response = await fetch('/api/imu');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -74,13 +74,15 @@ function App() {
             </div>
 
             {/* 3D Visualizer Widget */}
-            <div className="visualizer-widget">
-              <VisualizerWidget
-                isExpanded={expandedWidget === 'visualizer'}
-                onExpand={() => handleExpand('visualizer')}
-                onClose={handleClose}
-              />
-            </div>
+            {expandedWidget !== 'visualizer' && (
+              <div className="visualizer-widget">
+                <VisualizerWidget
+                  isExpanded={false}
+                  onExpand={() => handleExpand('visualizer')}
+                  onClose={handleClose}
+                />
+              </div>
+            )}
 
           {/* cameras widget */}
           <div className="cameras-widget">

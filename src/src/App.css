@@ -483,23 +483,24 @@ body {
   margin-top: 8px;
 }
 
-.charts-container,
-.chart-section {
+.charts-container {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.charts-container {
-  min-height: 500px;
-}
-
 .chart-section {
+  flex: 1;
+  min-height: 0;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .chart-section h4 {
@@ -508,6 +509,11 @@ body {
   color: #ffffff;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding-bottom: 8px;
+}
+
+.chart-body {
+  flex: 1;
+  min-height: 0;
 }
 
 /* Recharts styling */
