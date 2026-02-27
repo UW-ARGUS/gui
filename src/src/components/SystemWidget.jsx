@@ -21,7 +21,7 @@ function SystemWidget({ isExpanded, onExpand, onClose, connectionStatus }) {
     if (executing) return;
     setExecuting(script);
     try {
-      await fetch('http://localhost:3001/api/execute-script', {
+      await fetch('/api/execute-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ script, action }),
