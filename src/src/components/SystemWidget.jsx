@@ -1,7 +1,10 @@
-import { Maximize2, X, Activity } from 'lucide-react';
+import { useState } from 'react';
+import { Maximize2, X, Activity, RefreshCw, Power } from 'lucide-react';
 import { mockData } from '../data/mockData';
 
 function SystemWidget({ isExpanded, onExpand, onClose, connectionStatus }) {
+  const [executing, setExecuting] = useState(null);
+
   const getConnectionStatus = () => {
     if (connectionStatus.isConnected) {
       return { text: 'Connected', class: 'status-active' };
@@ -13,6 +16,22 @@ function SystemWidget({ isExpanded, onExpand, onClose, connectionStatus }) {
   };
 
   const connStatus = getConnectionStatus();
+
+  const runScript = async (script, action) => {
+    if (executing) return;
+    setExecuting(script);
+    try {
+      await fetch('http://localhost:3001/api/execute-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script, action }),
+      });
+    } catch (err) {
+      console.error(`Failed to execute ${script}:`, err);
+    } finally {
+      setExecuting(null);
+    }
+  };
 
   return (
     <div className="widget">
@@ -37,6 +56,24 @@ function SystemWidget({ isExpanded, onExpand, onClose, connectionStatus }) {
         <div className="metric">
           <span className="metric-label">Sensors Connected</span>
           <span className="metric-value">{mockData.system.sensorsConnected}</span>
+        </div>
+        <div className="system-actions">
+          <button
+            className={`action-button restart-button ${executing === 'start_embedded.sh' ? 'executing' : ''}`}
+            onClick={() => runScript('start_embedded.sh', 'restart_embedded')}
+            disabled={!!executing}
+          >
+            <RefreshCw size={16} />
+            {executing === 'start_embedded.sh' ? 'Restarting...' : 'Restart Embedded'}
+          </button>
+          <button
+            className={`action-button power-button ${executing === 'power_off.sh' ? 'executing' : ''}`}
+            onClick={() => runScript('power_off.sh', 'power_off')}
+            disabled={!!executing}
+          >
+            <Power size={16} />
+            {executing === 'power_off.sh' ? 'Powering Off...' : 'Power Off'}
+          </button>
         </div>
       </div>
     </div>

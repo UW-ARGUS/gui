@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Maximize2, X, Thermometer, Activity, Battery } from 'lucide-react';
+import { Maximize2, X, Activity } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // Shared configurations
@@ -24,9 +24,7 @@ const CHART_CONFIG = {
 };
 
 const METRICS_CONFIG = {
-  temperature: { icon: Thermometer, label: 'Temperature', unit: '°C', color: '#82ca9d', domain: [15, 35] },
-  latency: { icon: Activity, label: 'Latency', unit: 'ms', color: '#8884d8', domain: [0, 100] },
-  battery: { icon: Battery, label: 'Battery', unit: '%', color: '#ffc658', domain: [0, 100] }
+  latency: { icon: Activity, label: 'Latency', unit: 'ms', color: '#8884d8', domain: [0, 100] }
 };
 
 // Reusable Chart Component
@@ -64,14 +62,12 @@ function MetricChart({ data, metricKey, height = 150 }) {
 
 function TimeSeriesGraphWidget({ isExpanded, onExpand, onClose }) {
   const [data, setData] = useState([]);
-  const [currentMetrics, setCurrentMetrics] = useState({ temperature: 24, latency: 23, battery: 80 });
+  const [currentMetrics, setCurrentMetrics] = useState({ latency: 23 });
 
   useEffect(() => {
     const generateDataPoint = (timestamp) => {
       const newMetrics = {
-        temperature: Math.max(15, Math.min(35, currentMetrics.temperature + (Math.random() - 0.5) * 2)),
-        latency: Math.max(5, Math.min(100, currentMetrics.latency + (Math.random() - 0.5) * 10)),
-        battery: Math.max(0, Math.min(100, currentMetrics.battery + (Math.random() - 0.5) * 1))
+        latency: Math.max(5, Math.min(100, currentMetrics.latency + (Math.random() - 0.5) * 10))
       };
       
       setCurrentMetrics(newMetrics);
@@ -120,7 +116,7 @@ function TimeSeriesGraphWidget({ isExpanded, onExpand, onClose }) {
               <span className="metric-value">{currentMetrics.latency.toFixed(1)}ms</span>
             </div>
             <div className="mini-chart">
-              <ResponsiveContainer width="100%" height={120}>
+              <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.slice(-15)} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="2 2" stroke="rgba(255, 255, 255, 0.1)" />
                   <XAxis 

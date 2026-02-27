@@ -81,7 +81,7 @@ body {
 /* imu widget - left middle */
 .imu-widget {
   grid-column: 1 / 4;
-  grid-row: 4 / 9;
+  grid-row: 4 / 10;
 }
 
 /* Main visualizer - center area */
@@ -99,7 +99,7 @@ body {
 /* time series graph widget - bottom left */
 .timeseries-widget {
   grid-column: 1 / 4;
-  grid-row: 9 / 13;
+  grid-row: 10 / 13;
 }
 
 /* widget styles */
@@ -152,6 +152,138 @@ body {
 .control-button:hover {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* System action buttons */
+.system-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 40px;
+}
+
+.action-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.action-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.restart-button {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.restart-button:hover:not(:disabled) {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.2);
+}
+
+.power-button {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.power-button:hover:not(:disabled) {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.test-button {
+  border-color: rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.test-button:hover:not(:disabled) {
+  border-color: rgba(139, 92, 246, 0.5);
+  background: rgba(139, 92, 246, 0.2);
+}
+
+.action-button.executing {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.script-output {
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  font-size: 12px;
+}
+
+.output-ok {
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.output-error {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.script-output-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.output-close {
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.4);
+  transition: color 0.2s ease;
+}
+
+.output-close:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.script-output-body {
+  margin: 0;
+  padding: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.6;
+  max-height: 160px;
+  overflow-y: auto;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
 }
 
 /* main content area of widgets */
@@ -316,7 +448,7 @@ body {
 
 .mini-chart {
   flex: 1;
-  min-height: 120px;
+  min-height: 0;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -332,7 +464,7 @@ body {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: 16px;
   margin-bottom: 20px;
 }
