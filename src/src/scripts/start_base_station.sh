@@ -3,9 +3,10 @@ cd ~/ARGUS-workspace/mapping
 
 echo $PWD
 source .venv/bin/activate
-python src/main.py
+cd src
+python main.py
 
-cd ..
+cd ../..
 
 echo "run main.py mapping" 
 python listen_to_pi.py
